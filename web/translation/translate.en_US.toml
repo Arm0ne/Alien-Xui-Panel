@@ -86,7 +86,7 @@
 
 [pages.login]
 "hello" = "Hello"
-"XPanelSystem" = "Management System"
+"AlienPanelSystem" = "Management System"
 "title" = "Welcome to Use"
 "loginAgain" = "Your session has expired, please log in again"
 
@@ -154,13 +154,9 @@
 "getConfigError" = "An error occurred while retrieving the config file."
 "betterPanel" = "A Better Panel"
 "builtOnXray" = "Built On Xray Core"
-"xpanelTitle" = "〔X-Panel〕Dashboard"
-"tgPrivateChat" = "TG Private Chat"
-"tgGroupChat" = "〔X-Panel〕Group Chat"
+"alienPanelTitle" = "〔Alien-Panel〕Dashboard"
 "portCheck" = "Port Check"
 "speedTest" = "Speed Test"
-"datasnapshot" = "Data Snapshot"
-"emergencyrecovery" = "Emergency Recovery"
 
 [pages.inbounds]
 "allTimeTraffic" = "All-time Traffic"
@@ -250,7 +246,6 @@
 "deviceLimitDesc"="Please enter the specific quantity, \r\n0 means no limit (leaving it blank also means no limit)"
 "speedLimit"="Independent speedLimit"
 "speedLimitDesc"="Set the maximum upload/download speed for this user in KB/s. 0 means unlimited speed."
-"oneClickConfig"="One-click configuration"
 "is_subConversion"="Subscription Conversion"
 "confirmCreate"="Confirm submission creation"
 
@@ -305,28 +300,6 @@
 "statusDescription" = "Status Desc"
 "requestHeader" = "Request Header"
 "responseHeader" = "Response Header"
-
-[pages.inbounds.oneClick]
-"title" = "One-click configuration"
-"prompt" = "Select a preset configuration to quickly create an inbound connection."
-"presetType" = "Preset protocol configuration type"
-"generateTab" = "Generate Configuration"
-"historyTab" = "History"
-"historyType" = "Generate Type"
-"historyLink" = "Links"
-"historyTime" = "Generated Time"
-"clickToCopyTitle" = "Click to copy link"
-"scanQrcodeTitle" = "Scan QR code"
-"clickToCopyHint" = "(Click on the image to copy)"
-"linkCreated" = "The inbound link has been created, please copy the following address:"
-"descriptionTitle" = "\r\n\r\nUsage notes"
-"descriptionContent" = "1.This function will automatically generate inbound connections for the VLESS + TCP + Reality (xtls-rprx-vision) and VLESS + XHTTP + Reality protocols. The first two combinations are suitable for direct connections.\r\n2.Or for VLESS Encryption + XHTTP + TLS (with optional CDN) protocols.\r\n3.And randomly assign an available port. Please ensure that this port is open. After generating, please copy the [Link Address] directly.\r\n4.The [One-Click Configuration] generation function here is connected to the [Inbound] data.\r\n5.After one-click creation, you can manually view/copy or edit the details in the list to add other parameters."
-
-[pages.inbounds.oneClick.preset]
-"vless_reality" = "VLESS + TCP + Reality + Vision"
-"vless_xhttp_reality" = "VLESS + XHTTP + Reality"
-"vless_tls_encryption" = "VLESS Encryption + TLS (CDN optional)"
-"switch_vision_seed_dev" = "Switch + Vision Seed (in development)"
 
 [pages.inbounds.subConversion]
 "modalTitle" = "Jump to tip..."
@@ -509,9 +482,6 @@
 [pages.navigation]
 "title" = "Practical Navigation"
 
-[pages.controlledmanagement]
-"title" = "Controlled Management"
-
 [pages.xray.rules]
 "first" = "First"
 "last" = "Last"
@@ -667,7 +637,7 @@
 "status" = "✅ Bot is OK!"
 "usage" = "❗ Please provide a text to search!"
 "getID" = "🆔 Your ID: <code>{{ .ID }}</code>"
-"helpAdminCommands" = "To restart Xray Core:\r\n<code>/restart</code>\r\n\r\nTo search for customer emails:\r\n<code>/usage [email]</code>\r\n\r\nTo search inbound (with customer statistics):\r\n<code>/inbound [notes]</code>\r\n\r\nTelegram chat ID:\r\n<code>/id</code>\r\n\r\nOne-click configuration:\r\n<code>/oneclick</code>\r\n\r\nSubscription conversion:\r\n<code>/subconverter</code>\r\n\r\nRestart〔X-Panel〕:\r\n<code>/restartx</code>"
+"helpAdminCommands" = "To restart Xray Core:\r\n<code>/restart</code>\r\n\r\nTo search for customer emails:\r\n<code>/usage [email]</code>\r\n\r\nTo search inbound (with customer statistics):\r\n<code>/inbound [notes]</code>\r\n\r\nTelegram chat ID:\r\n<code>/id</code>\r\n\r\nSubscription conversion:\r\n<code>/subconverter</code>\r\n\r\nRestart〔Alien-Panel〕:\r\n<code>/restartx</code>"
 "helpClientCommands" = "To search for statistics, use the following command:\r\n\r\n<code>/usage [Email]</code>\r\n\r\nTelegram Chat ID:\r\n<code>/id</code>"
 "restartUsage" = "\r\n\r\n<code>/restart</code>"
 "restartSuccess" = "✅ Operation successful!"
@@ -687,7 +657,7 @@
 "report" = "🕰 Scheduled Reports: {{ .RunTime }}\r\n"
 "datetime" = "⏰ Date&Time: {{ .DateTime }}\r\n"
 "hostname" = "💻 Host: {{ .Hostname }}\r\n"
-"version" = "🚀 X-Panel Version: v{{ .Version }}\r\n"
+"version" = "🚀 Alien-Panel Version: v{{ .Version }}\r\n"
 "xrayVersion" = "📡 Xray Core Version: v{{ .XrayVersion }}\r\n"
 "ipv6" = "🌐 IPv6: {{ .IPv6 }}\r\n"
 "ipv4" = "🌐 IPv4: {{ .IPv4 }}\r\n"
@@ -786,7 +756,6 @@
 "change_comment" = "⚙️💬 Comment"
 "ResetAllTraffics" = "Reset All Traffics"
 "SortedTrafficUsageReport" = "Traffic Usage Report"
-"oneClick" = "🚀 One-click configuration"
 "subconverter" = "🔄 Subscription conversion"
 
 [tgbot.answers]

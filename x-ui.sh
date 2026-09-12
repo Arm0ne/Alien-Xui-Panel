@@ -6,6 +6,11 @@ blue='\033[0;34m'
 yellow='\033[0;33m'
 plain='\033[0m'
 
+# 发布仓库可通过环境变量覆盖；默认使用 Alien-Panel 仓库。
+ALIEN_PANEL_REPO="${ALIEN_PANEL_REPO:-Arm0ne/Alien-Xui-Panel}"
+ALIEN_PANEL_REF="${ALIEN_PANEL_REF:-main}"
+ALIEN_PANEL_RAW_BASE="https://raw.githubusercontent.com/${ALIEN_PANEL_REPO}/${ALIEN_PANEL_REF}"
+
 #Add some basic function here
 function LOGD() {
     echo -e "${yellow}[DEG] $* ${plain}"
@@ -30,7 +35,7 @@ elif [[ -f /usr/lib/os-release ]]; then
     source /usr/lib/os-release
     release=$ID
 else
-    echo -e "${red}检查服务器操作系统失败，请联系作者!${plain}" >&2
+    echo -e "${red}检查服务器操作系统失败，请确认系统信息文件存在后重试。${plain}" >&2
     exit 1
 fi
 
@@ -38,10 +43,10 @@ echo -e "——————————————————————"
 echo -e "当前服务器的操作系统为:${red} $release${plain}"
 echo ""
 xui_version=$(/usr/local/x-ui/x-ui -v)
-last_version=$(curl -Ls "https://api.github.com/repos/xeefei/x-panel/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-echo -e "${green}当前代理面板的版本为: ${red}〔X-Panel面板〕v${xui_version}${plain}"
+last_version=$(curl -Ls "https://api.github.com/repos/${ALIEN_PANEL_REPO}/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+echo -e "${green}当前代理面板的版本为: ${red}〔Alien-Panel面板〕v${xui_version}${plain}"
 echo ""
-echo -e "${yellow}〔X-Panel面板〕最新版为---------->>> ${last_version}${plain}"
+echo -e "${yellow}〔Alien-Panel面板〕最新版为---------->>> ${last_version}${plain}"
 
 os_version=$(grep -i version_id /etc/os-release | cut -d \" -f2 | cut -d . -f1)
 
@@ -143,7 +148,7 @@ before_show_menu() {
 }
 
 install() {
-    bash <(curl -Ls https://raw.githubusercontent.com/xeefei/x-panel/main/install.sh)
+    bash <(curl -Ls "${ALIEN_PANEL_RAW_BASE}/install.sh")
     if [[ $? == 0 ]]; then
         if [[ $# == 0 ]]; then
             start
@@ -162,7 +167,7 @@ update() {
         fi
         return 0
     fi
-    bash <(curl -Ls https://raw.githubusercontent.com/xeefei/x-panel/main/install.sh)
+    bash <(curl -Ls "${ALIEN_PANEL_RAW_BASE}/install.sh")
     if [[ $? == 0 ]]; then
         LOGI "更新完成，面板已自动重启"
         exit 0
@@ -180,7 +185,7 @@ update_menu() {
         return 0
     fi
     
-    wget --no-check-certificate -O /usr/bin/x-ui https://raw.githubusercontent.com/xeefei/x-panel/main/x-ui.sh
+    wget --no-check-certificate -O /usr/bin/x-ui "${ALIEN_PANEL_RAW_BASE}/x-ui.sh"
     chmod +x /usr/local/x-ui/x-ui.sh
     chmod +x /usr/bin/x-ui
     
@@ -202,7 +207,7 @@ custom_version() {
         exit 1
     fi
 
-    download_link="https://raw.githubusercontent.com/xeefei/x-panel/master/install.sh"
+    download_link="${ALIEN_PANEL_RAW_BASE}/install.sh"
 
     # Use the entered panel version in the download link
     install_command="bash <(curl -Ls $download_link) v$panel_version"
@@ -236,7 +241,7 @@ uninstall() {
     echo ""
     echo -e "卸载成功\n"
     echo "如果您需要再次安装此面板，可以使用以下命令:"
-    echo -e "${green}bash <(curl -Ls https://raw.githubusercontent.com/xeefei/x-panel/master/install.sh)${plain}"
+    echo -e "${green}bash <(curl -Ls ${ALIEN_PANEL_RAW_BASE}/install.sh)${plain}"
     echo ""
     # Trap the SIGTERM signal
     trap delete_script SIGTERM
@@ -260,7 +265,7 @@ reset_user() {
     echo -e "面板登录用户名已重置为：${green} ${config_account} ${plain}"
     echo -e "面板登录密码已重置为：${green} ${config_password} ${plain}"
     echo -e "${yellow} 面板 Secret Token 已禁用 ${plain}"
-    echo -e "${green} 请使用新的登录用户名和密码访问 X-Panel 面板。也请记住它们！${plain}"
+    echo -e "${green} 请使用新的登录用户名和密码访问 Alien-Panel 面板。也请记住它们！${plain}"
     confirm_restart
 }
 
@@ -341,9 +346,9 @@ check_config() {
             echo ""
             echo -e "${green}3、请在终端中成功输入服务器的〔root密码〕，注意区分大小写，用以上命令进行转发${plain}"
             echo ""
-            echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}[::1]:15208${existing_webBasePath}${plain} ${green}进入〔X-Panel面板〕登录界面"
+            echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}[::1]:15208${existing_webBasePath}${plain} ${green}进入〔Alien-Panel面板〕登录界面"
             echo ""
-            echo -e "${red}注意：若不使用〔ssh转发〕请为X-Panel面板配置安装证书再行登录管理后台${plain}"
+            echo -e "${red}注意：若不使用〔ssh转发〕请为Alien-Panel面板配置安装证书再行登录管理后台${plain}"
         elif [[ -n $v4 && -n $v6 ]]; then
             echo -e "${green}1、本地电脑客户端转发命令：${plain} ${blue}ssh -L 15208:127.0.0.1:${existing_port}${blue} root@$v4${plain} ${yellow}或者 ${blue}ssh  -L [::]:15208:127.0.0.1:${existing_port}${blue} root@[$v6]${plain}"
             echo ""
@@ -351,9 +356,9 @@ check_config() {
             echo ""
             echo -e "${green}3、请在终端中成功输入服务器的〔root密码〕，注意区分大小写，用以上命令进行转发${plain}"
             echo ""
-            echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}127.0.0.1:15208${existing_webBasePath}${plain} ${yellow}或者${plain} ${blue}[::1]:15208${existing_webBasePath}${plain} ${green}进入〔X-Panel面板〕登录界面"
+            echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}127.0.0.1:15208${existing_webBasePath}${plain} ${yellow}或者${plain} ${blue}[::1]:15208${existing_webBasePath}${plain} ${green}进入〔Alien-Panel面板〕登录界面"
             echo ""
-            echo -e "${red}注意：若不使用〔ssh转发〕请为X-Panel面板配置安装证书再行登录管理后台${plain}"
+            echo -e "${red}注意：若不使用〔ssh转发〕请为Alien-Panel面板配置安装证书再行登录管理后台${plain}"
         else
             echo -e "${green}1、本地电脑客户端转发命令：${plain} ${blue}ssh -L 15208:127.0.0.1:${existing_port}${blue} root@$v4${plain}"
             echo ""
@@ -361,9 +366,9 @@ check_config() {
             echo ""
             echo -e "${green}3、请在终端中成功输入服务器的〔root密码〕，注意区分大小写，用以上命令进行转发${plain}"
             echo ""
-            echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}127.0.0.1:15208${existing_webBasePath}${plain} ${green}进入〔X-Panel面板〕登录界面"
+            echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}127.0.0.1:15208${existing_webBasePath}${plain} ${green}进入〔Alien-Panel面板〕登录界面"
             echo ""
-            echo -e "${red}注意：若不使用〔ssh转发〕请为X-Panel面板配置安装证书再行登录管理后台${plain}"
+            echo -e "${red}注意：若不使用〔ssh转发〕请为Alien-Panel面板配置安装证书再行登录管理后台${plain}"
             echo ""
         fi
     fi
@@ -391,7 +396,7 @@ start() {
         sleep 2
         check_status
         if [[ $? == 0 ]]; then
-            LOGI "X-Panel 已成功启动"
+            LOGI "Alien-Panel 已成功启动"
         else
             LOGE "面板启动失败，可能是启动时间超过两秒，请稍后查看日志信息"
         fi
@@ -412,7 +417,7 @@ stop() {
         sleep 2
         check_status
         if [[ $? == 1 ]]; then
-            LOGI "X-Panel 和 Xray 已成功关闭"
+            LOGI "Alien-Panel 和 Xray 已成功关闭"
         else
             LOGE "面板关闭失败，可能是停止时间超过两秒，请稍后查看日志信息"
         fi
@@ -428,7 +433,7 @@ restart() {
     sleep 2
     check_status
     if [[ $? == 0 ]]; then
-        LOGI "X-Panel 和 Xray 已成功重启"
+        LOGI "Alien-Panel 和 Xray 已成功重启"
     else
         LOGE "面板重启失败，可能是启动时间超过两秒，请稍后查看日志信息"
     fi
@@ -559,7 +564,7 @@ enable_bbr() {
 }
 
 update_shell() {
-    wget -O /usr/bin/x-ui -N --no-check-certificate https://github.com/xeefei/x-panel/raw/main/x-ui.sh
+    wget -O /usr/bin/x-ui -N --no-check-certificate "${ALIEN_PANEL_RAW_BASE}/x-ui.sh"
     if [[ $? != 0 ]]; then
         echo ""
         LOGE "下载脚本失败，请检查机器是否可以连接至 GitHub"
@@ -984,7 +989,7 @@ ssl_cert_issue_standalone_embedded() {
         # === 文件检查判断 ===
         if [[ -f "${webCertFile}" && -f "${webKeyFile}" && -s "${webCertFile}" && -s "${webKeyFile}" ]]; then
             
-            LOGI "检测到证书文件存在且有效，正在应用到 X-Panel 面板..."
+            LOGI "检测到证书文件存在且有效，正在应用到 Alien-Panel 面板..."
             /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile"
             
             echo -e "${green}恭喜！备用方式证书申请并配置成功！${plain}"
@@ -1097,7 +1102,7 @@ ssl_cert_issue_main() {
                 mkdir -p "$certPath"
             fi
             
-            # 复制文件到 X-Panel 标准目录，统一命名
+            # 复制文件到 Alien-Panel 标准目录，统一命名
             # 使用 \cp -f 强制覆盖，不提示
             \cp -f "$user_cert" "${certPath}/fullchain.pem"
             \cp -f "$user_key" "${certPath}/privkey.pem"
@@ -1585,7 +1590,7 @@ echo -e "2. 自动调用面板的证书"
 echo -e "3. 自动部署 Sublink 服务"
 echo -e "4. 自动配置 Nginx 反向代理"
 echo -e "5. 可直观在前端页面配置订阅"
-echo -e "作者：〔X-Panel 面板〕专属定制"
+echo -e "提供订阅转换服务和面板证书集成"
 echo -e "===============================================${plain}"
 echo ""
     local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
@@ -1622,7 +1627,7 @@ else
     echo -e "${green}检测到 Nginx 已安装，跳过安装步骤${plain}"
 fi
 
-# --------- 拷贝X-Panel已有证书到 Nginx ----------
+# --------- 拷贝Alien-Panel已有证书到 Nginx ----------
 mkdir -p /etc/nginx/ssl
 acme_path="/root/.acme.sh/${domain}_ecc"
 
@@ -1683,7 +1688,7 @@ echo -e "${green}Web 界面访问地址：https://${domain}:15268${plain}"
 echo ""
 echo -e "${green}若要登录前端网页使用【订阅转换】，请直接复制以上地址${plain}"
 echo ""
-echo -e "${green}接下来流程会进入〔X-Panel面板〕x-ui 菜单项${plain}"
+echo -e "${green}接下来流程会进入〔Alien-Panel面板〕x-ui 菜单项${plain}"
 sleep 8
 echo ""
 # --------- 返回菜单 ----------
@@ -2029,31 +2034,31 @@ iplimit_remove_conflicts() {
 
 show_usage() {
     echo -e "         ---------------------"
-    echo -e "         |${green}X-Panel 控制菜单用法 ${plain}|${plain}"
+    echo -e "         |${green}Alien-Panel 控制菜单用法 ${plain}|${plain}"
     echo -e "         |  ${yellow}一个更好的面板   ${plain}|${plain}"   
     echo -e "         | ${yellow}基于Xray Core构建 ${plain}|${plain}"  
     echo -e "--------------------------------------------"
     echo -e "x-ui              - 进入管理脚本"
-    echo -e "x-ui start        - 启动 X-Panel 面板"
-    echo -e "x-ui stop         - 关闭 X-Panel 面板"
-    echo -e "x-ui restart      - 重启 X-Panel 面板"
-    echo -e "x-ui status       - 查看 X-Panel 状态"
+    echo -e "x-ui start        - 启动 Alien-Panel 面板"
+    echo -e "x-ui stop         - 关闭 Alien-Panel 面板"
+    echo -e "x-ui restart      - 重启 Alien-Panel 面板"
+    echo -e "x-ui status       - 查看 Alien-Panel 状态"
     echo -e "x-ui settings     - 查看当前设置信息"
-    echo -e "x-ui enable       - 启用 X-Panel 开机启动"
-    echo -e "x-ui disable      - 禁用 X-Panel 开机启动"
-    echo -e "x-ui log          - 查看 X-Panel 运行日志"
+    echo -e "x-ui enable       - 启用 Alien-Panel 开机启动"
+    echo -e "x-ui disable      - 禁用 Alien-Panel 开机启动"
+    echo -e "x-ui log          - 查看 Alien-Panel 运行日志"
     echo -e "x-ui banlog       - 检查 Fail2ban 禁止日志"
-    echo -e "x-ui update       - 更新 X-Panel 面板"
-    echo -e "x-ui custom       - 自定义 X-Panel 版本"
-    echo -e "x-ui install      - 安装 X-Panel 面板"
-    echo -e "x-ui uninstall    - 卸载 X-Panel 面板"
+    echo -e "x-ui update       - 更新 Alien-Panel 面板"
+    echo -e "x-ui custom       - 自定义 Alien-Panel 版本"
+    echo -e "x-ui install      - 安装 Alien-Panel 面板"
+    echo -e "x-ui uninstall    - 卸载 Alien-Panel 面板"
     echo -e "--------------------------------------------"
 }
 
 show_menu() {
     echo -e "
 ——————————————————————
-  ${green}X-Panel 面板管理脚本${plain}
+  ${green}Alien-Panel 面板管理脚本${plain}
   ${yellow}  一个更好的面板${plain}
   ${yellow} 基于Xray Core构建${plain}
 ——————————————————————
@@ -2089,36 +2094,7 @@ show_menu() {
   ${green}24.${plain} Speedtest by Ookla
   ${green}25.${plain} 安装订阅转换 
 ——————————————————————
-  ${green}若在使用过程中有任何问题${plain}
-  ${yellow}请加入〔X-Panel面板〕交流群${plain}
-  ${red}https://t.me/XUI_CN ${yellow}截图进行反馈${plain}
-  ${green}〔X-Panel面板〕项目地址${plain}
-  ${yellow}https://github.com/xeefei/x-panel${plain}
-  ${green}详细〔安装配置〕教程${plain}
-  ${yellow}https://xeefei.blogspot.com/2025/09/x-panel.html${plain}
 ——————————————————————
-
--------------->>>>>>>赞 助 推 广 区<<<<<<<<-------------------
-
-${green}1、搬瓦工GIA高端线路：${yellow}https://bandwagonhost.com/aff.php?aff=75015${plain}
-
-${green}2、Dmit高端GIA线路：${yellow}https://www.dmit.io/aff.php?aff=9326${plain}
-
-${green}3、Gomami亚太顶尖优化线路：${yellow}https://gomami.io/aff.php?aff=174${plain}
-
-${green}4、ISIF优质亚太优化线路：${yellow}https://cloud.isif.net/login?affiliation_code=333${plain}
-
-${green}5、ZoroCloud全球优质原生家宽&住宅双lSP，跨境首选：${yellow}https://my.zorocloud.com/aff.php?aff=1072${plain}
-
-${green}6、三网直连 IEPL / IPLC 直播流量转发：${yellow}https://idc333.top/#register/BCUZXNELNO${plain}
-
-${green}7、Bagevm优质落地鸡（原生IP全解锁）：${yellow}https://www.bagevm.com/aff.php?aff=754${plain}
-
-${green}8、白丝云〔4837线路〕实惠量大管饱：${yellow}https://cloudsilk.io/aff.php?aff=706${plain}
-
-${green}9、RackNerd极致性价比机器：${yellow}https://my.racknerd.com/aff.php?aff=15268&pid=912${plain}
-
-----------------------------------------------
 "
     show_status
     echo && read -p "请输入选项 [0-25]: " num

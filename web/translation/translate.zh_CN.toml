@@ -87,7 +87,7 @@
 
 [pages.login]
 "hello" = "你好"
-"XPanelSystem" = "管理系统"
+"AlienPanelSystem" = "管理系统"
 "title" = "欢迎使用"
 "loginAgain" = "登录时效已过，请重新登录"
 
@@ -156,13 +156,9 @@
 "getConfigError" = "检索配置文件时出错"
 "betterPanel" = "一个更好的面板"
 "builtOnXray" = "基于 Xray Core 构建"
-"xpanelTitle" = "〔X-Panel面板〕"
-"tgPrivateChat" = "TG私聊交流"
-"tgGroupChat" = "〔X-Panel面板〕交流群"
+"alienPanelTitle" = "〔Alien-Panel面板〕"
 "portCheck" = "端口检测"
 "speedTest" = "网络测速"
-"datasnapshot" = "创建数据快照"
-"emergencyrecovery" = "远程急救还原"
 
 [pages.inbounds]
 "allTimeTraffic" = "累计总流量"
@@ -254,7 +250,6 @@
 "deviceLimitDesc"="请输入具体数量，\r\n0表示不限制（留空也表示不限制）"
 "speedLimit"="独立限速"
 "speedLimitDesc"="设置该用户的最大〔上传/下载速度〕，\r\n单位 KB/s，0 表示不限速"
-"oneClickConfig"="一键配置"
 "is_subConversion"="订阅转换"
 "confirmCreate"="确认提交创建"
 
@@ -311,31 +306,6 @@
 "statusDescription" = "状态说明"
 "requestHeader" = "请求头"
 "responseHeader" = "响应头"
-
-[pages.inbounds.oneClick]
-"title" = "一键配置"
-"prompt" = "选择一个预设配置快速创建入站连接。"
-"presetType" = "预设协议配置类型"
-"generateTab" = "生成配置"
-"historyTab" = "历史记录"
-"historyType" = "生成类型"
-"historyLink" = "链接"
-"historyTime" = "生成时间"
-"loading" = "正在生成高清二维码..."
-"success" = "高清二维码生成成功！"
-"warning" = "连接转换服务失败，二维码可能难以扫描。"
-"clickToCopyTitle" = "点击复制链接"
-"scanQrcodeTitle" = "扫描二维码"
-"clickToCopyHint" = "（点击图片也可复制）"
-"linkCreated" = "入站链接已创建，请复制以下地址："
-"descriptionTitle" = "\r\n\r\n用法说明："
-"descriptionContent" = "1、该功能将自动生成 VLESS + TCP + Reality (xtls-rprx-vision) 和 VLESS + XHTTP + Reality 协议的入站，以上最前面两种协议组合适合直连，\r\n2、或 VLESS Encryption + XHTTP + TLS（可选套CDN）协议的入站，\r\n3、并随机分配一个可用端口，请确保此端口放行，生成后请直接复制【链接地址】，\r\n4、此处的【一键配置】生成功能，跟【入站】的数据是打通的，\r\n5、你可以在一键创建后于列表中，手动查看/复制或编辑详细信息，以便添加其他参数。"
-
-[pages.inbounds.oneClick.preset]
-"vless_reality" = "VLESS + TCP + Reality + Vision"
-"vless_xhttp_reality" = "VLESS + XHTTP + Reality"
-"vless_tls_encryption" = "VLESS Encryption + TLS（可选套CDN）"
-"switch_vision_seed_dev" = "Switch + Vision Seed (开发中)"
 
 [pages.inbounds.subConversion]
 "modalTitle" = "通用订阅转换"
@@ -527,9 +497,6 @@
 [pages.navigation]
 "title" = "实用导航"
 
-[pages.controlledmanagement]
-"title" = "主从管理"
-
 [pages.xray.rules]
 "first" = "置顶"
 "last" = "置底"
@@ -685,7 +652,7 @@
 "status" = "✅ 机器人正常运行！"
 "usage" = "❗ 请输入要搜索的文本！"
 "getID" = "🆔 您的 ID 为：<code>{{ .ID }}</code>"
-"helpAdminCommands" = "要重新启动 Xray Core：\r\n<code>/restart</code>\r\n\r\n要搜索客户电子邮件：\r\n<code>/usage [电子邮件]</code>\r\n\r\n要搜索入站（带有客户统计数据）：\r\n<code>/inbound [备注]</code>\r\n\r\nTelegram聊天ID：\r\n<code>/id</code>\r\n\r\n一键配置：\r\n<code>/oneclick</code>\r\n\r\n订阅转换：\r\n<code>/subconverter</code>\r\n\r\n重启〔X-Panel 面板〕：\r\n<code>/restartx</code>"
+"helpAdminCommands" = "要重新启动 Xray Core：\r\n<code>/restart</code>\r\n\r\n要搜索客户电子邮件：\r\n<code>/usage [电子邮件]</code>\r\n\r\n要搜索入站（带有客户统计数据）：\r\n<code>/inbound [备注]</code>\r\n\r\nTelegram聊天ID：\r\n<code>/id</code>\r\n\r\n订阅转换：\r\n<code>/subconverter</code>\r\n\r\n重启〔Alien-Panel 面板〕：\r\n<code>/restartx</code>"
 "helpClientCommands" = "要搜索统计数据，请使用以下命令：\r\n<code>/usage [电子邮件]</code>\r\n\r\nTelegram聊天ID：\r\n<code>/id</code>"
 "restartUsage" = "\r\n\r\n<code>/restart</code>"
 "restartSuccess" = "✅ 操作成功!"
@@ -705,7 +672,7 @@
 "report" = "🕰 定时报告：{{ .RunTime }}\r\n"
 "datetime" = "⏰ 日期时间：{{ .DateTime }}\r\n"
 "hostname" = "💻 主机名：{{ .Hostname }}\r\n"
-"version" = "🚀 X-Panel 版本：v{{ .Version }}\r\n"
+"version" = "🚀 Alien-Panel 版本：v{{ .Version }}\r\n"
 "xrayVersion" = "📡 Xray Core 版本：v{{ .XrayVersion }}\r\n"
 "ipv6" = "🌐 IPv6：{{ .IPv6 }}\r\n"
 "ipv4" = "🌐 IPv4：{{ .IPv4 }}\r\n"
@@ -817,7 +784,6 @@
 "SortedTrafficUsageReport" = "流量使用报告"
 "updatePanel" = "🔄 更新面板" 
 "restartPanel" = "🚀 重启面板" 
-"oneClick" = "🚀 一键配置" 
 "subconverter" = "🔄 订阅转换" 
 
 

@@ -2,7 +2,10 @@ package job
 
 import (
 	"bufio"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
+	"fmt" // 中文注释 (新增): 导入 fmt 包用于格式化消息
 	"io"
 	"log"
 	"os"
@@ -10,17 +13,14 @@ import (
 	"regexp"
 	"runtime"
 	"sort"
-	"time"
 	"sync"
-                 "crypto/rand"
-                 "encoding/hex"
-                 "fmt" // 中文注释 (新增): 导入 fmt 包用于格式化消息
+	"time"
 
 	"x-ui/database"
 	"x-ui/database/model"
 	"x-ui/logger"
+	"x-ui/web/service"
 	"x-ui/xray"
-    "x-ui/web/service"
 )
 
 // =================================================================
@@ -45,8 +45,8 @@ type CheckDeviceLimitJob struct {
 	xrayApi xray.XrayAPI
 	// lastPosition 中文注释: 用于记录上次读取 access.log 的位置，避免重复读取
 	lastPosition int64
-                 // 〔中文注释〕: 注入 Telegram 服务用于发送通知，确保此行存在。
-	telegramService   service.TelegramService
+	// 〔中文注释〕: 注入 Telegram 服务用于发送通知，确保此行存在。
+	telegramService service.TelegramService
 
 	// violationStartTime: 记录用户“开始设备超限”的时间。
 	// 用于实现“观察期”：刚发现超限时不封，等 3 分钟后如果还超限才封。
@@ -72,7 +72,7 @@ func NewCheckDeviceLimitJob(xrayService *service.XrayService, telegramService se
 		xrayService: xrayService,
 		// 中文注释: 初始化 xrayApi 字段
 		xrayApi: xray.XrayAPI{},
-                                 // 〔中文注释〕: 将传入的 telegramService 赋值给结构体实例。
+		// 〔中文注释〕: 将传入的 telegramService 赋值给结构体实例。
 		telegramService: telegramService,
 
 		// 初始化防抖 Map
@@ -147,7 +147,7 @@ func (j *CheckDeviceLimitJob) parseAccessLog() {
 	now := time.Now()
 	for scanner.Scan() {
 		line := scanner.Text()
-		
+
 		emailMatch := emailRegex.FindStringSubmatch(line)
 		ipMatch := ipRegex.FindStringSubmatch(line)
 
@@ -309,19 +309,19 @@ func (j *CheckDeviceLimitJob) banUser(email string, activeIPCount int, info *str
 	Tag      string
 	Protocol model.Protocol
 }) {
-    // =================================================================
-    // 这一行代码是整个解封逻辑的灵魂！
-    // GetClientByEmail 函数会去查询您的数据库 (x-ui.db)，
-    // 找到 `inbounds` 表，解析其中的 `settings` 字段，并从中去，
-    // 读取出您最初设置的、最原始、最正确的用户信息（包括最原始的UUID），
-    // 然后把它赋值给 `client` 这个变量；此时，`client` 变量就持有了那个“老链接”的正确原始 UUID。
-    // =================================================================
+	// =================================================================
+	// 这一行代码是整个解封逻辑的灵魂！
+	// GetClientByEmail 函数会去查询您的数据库 (x-ui.db)，
+	// 找到 `inbounds` 表，解析其中的 `settings` 字段，并从中去，
+	// 读取出您最初设置的、最原始、最正确的用户信息（包括最原始的UUID），
+	// 然后把它赋值给 `client` 这个变量；此时，`client` 变量就持有了那个“老链接”的正确原始 UUID。
+	// =================================================================
 	_, client, err := j.inboundService.GetClientByEmail(email)
 	if err != nil || client == nil {
 		return
 	}
 	logger.Infof("〔设备限制〕超限：用户 %s. 限制: %d, 当前活跃: %d. 执行封禁掐网。", email, info.Limit, activeIPCount)
-	
+
 	// 〔中文注释〕: 以下是发送 Telegram 通知的核心代码，
 	// 它会调用我们注入的 telegramService 的 SendMessage 方法。
 	go func() {
@@ -330,7 +330,7 @@ func (j *CheckDeviceLimitJob) banUser(email string, activeIPCount int, info *str
 			return
 		}
 		tgMessage := fmt.Sprintf(
-			"<b>〔X-Panel面板〕设备超限提醒</b>\n\n"+
+			"<b>〔Alien-Panel面板〕设备超限提醒</b>\n\n"+
 				"  ------------------------------------\n"+
 				"  👤 用户 Email：%s\n"+
 				"  🖥️ 设备限制数量：%d\n"+
@@ -346,35 +346,38 @@ func (j *CheckDeviceLimitJob) banUser(email string, activeIPCount int, info *str
 		}
 	}()
 
-
 	// 中文注释: 步骤一：先从 Xray-Core 中删除该用户。
 	j.xrayApi.RemoveUser(info.Tag, email)
-    
-    // =================================================================
+
+	// =================================================================
 	// 中文注释: 增加 5000 毫秒延时，解决竞态条件问题
 	time.Sleep(5000 * time.Millisecond)
-    // =================================================================
+	// =================================================================
 
 	// 中文注释: 创建一个带有随机UUID/Password的临时客户端配置用于“封禁”
 	tempClient := *client
 
-                 // 适用于 VMess/VLESS
-	if tempClient.ID != "" { tempClient.ID = RandomUUID() }
+	// 适用于 VMess/VLESS
+	if tempClient.ID != "" {
+		tempClient.ID = RandomUUID()
+	}
 
-                 // 适用于 Trojan/Shadowsocks/Socks
-	if tempClient.Password != "" { tempClient.Password = RandomUUID() }
+	// 适用于 Trojan/Shadowsocks/Socks
+	if tempClient.Password != "" {
+		tempClient.Password = RandomUUID()
+	}
 
 	var clientMap map[string]interface{}
 	clientJson, _ := json.Marshal(tempClient)
 	json.Unmarshal(clientJson, &clientMap)
 
-                 // 中文注释: 步骤二：将这个带有错误UUID/Password的临时用户添加回去。
-                 // 客户端持有的还是旧的UUID，自然就无法通过验证，从而达到了“封禁”的效果。
+	// 中文注释: 步骤二：将这个带有错误UUID/Password的临时用户添加回去。
+	// 客户端持有的还是旧的UUID，自然就无法通过验证，从而达到了“封禁”的效果。
 	err = j.xrayApi.AddUser(string(info.Protocol), info.Tag, clientMap)
 	if err != nil {
 		logger.Warningf("通过API封禁用户 %s 失败: %v", email, err)
 	} else {
-	                 // 中文注释: 封禁成功后，在内存中标记该用户为“已封禁”状态。
+		// 中文注释: 封禁成功后，在内存中标记该用户为“已封禁”状态。
 		ClientStatus[email] = true
 	}
 }
@@ -389,26 +392,26 @@ func (j *CheckDeviceLimitJob) unbanUser(email string, activeIPCount int, info *s
 	if err != nil || client == nil {
 		return
 	}
-	logger.Infof("〔设备数量〕已恢复：用户 %s. 限制: %d, 当前活跃: %d. 执行解封/恢复用户。", email, info.Limit, activeIPCount)	
+	logger.Infof("〔设备数量〕已恢复：用户 %s. 限制: %d, 当前活跃: %d. 执行解封/恢复用户。", email, info.Limit, activeIPCount)
 
-                 // 中文注释: 步骤一：先从 Xray-Core 中删除用于“封禁”的那个临时用户。
+	// 中文注释: 步骤一：先从 Xray-Core 中删除用于“封禁”的那个临时用户。
 	j.xrayApi.RemoveUser(info.Tag, email)
-    
-    // =================================================================
+
+	// =================================================================
 	// 中文注释: 同样增加 5000 毫秒延时，确保解封操作的稳定性
 	time.Sleep(5000 * time.Millisecond)
-    // =================================================================
+	// =================================================================
 
 	var clientMap map[string]interface{}
 	clientJson, _ := json.Marshal(client)
 	json.Unmarshal(clientJson, &clientMap)
 
-                 // 中文注释: 步骤二：将数据库中原始的、正确的用户信息重新添加回 Xray-Core，从而实现“解封”。
+	// 中文注释: 步骤二：将数据库中原始的、正确的用户信息重新添加回 Xray-Core，从而实现“解封”。
 	err = j.xrayApi.AddUser(string(info.Protocol), info.Tag, clientMap)
 	if err != nil {
 		logger.Warningf("通过API恢复用户 %s 失败: %v", email, err)
 	} else {
-                                  // 中文注释: 解封成功后，从内存中移除该用户的“已封禁”状态标记。
+		// 中文注释: 解封成功后，从内存中移除该用户的“已封禁”状态标记。
 		delete(ClientStatus, email)
 	}
 }

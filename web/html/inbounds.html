@@ -292,9 +292,6 @@
                         </a-menu-item>
                       </a-menu>
                     </a-dropdown>
-                    <a-button type="primary" icon="thunderbolt" @click="openOneClickConfig">
-                      <template v-if="!isMobile">{{ i18n "pages.inbounds.oneClickConfig" }}</template>
-                    </a-button>
                     <a-button type="primary" icon="link" @click="handleSubscriptionConversion">
                       <template v-if="!isMobile">{{ i18n "pages.inbounds.is_subConversion" }}</template>
                     </a-button>
@@ -701,34 +698,6 @@
           </a-row>
         </transition>
       </a-spin>
-    <a-modal
-      :title="`{{ i18n "pages.inbounds.oneClick.title" }}`"
-      :visible="oneClickModalVisible"
-      :cancel-text="`{{ i18n "cancel" }}`"
-      :class="themeSwitcher.currentTheme"
-      @cancel="handleOneClickCancel"
-      :footer="null"
-   >
-      <a-alert
-      message="功能升级提示"
-      type="info"
-      show-icon
->
-    <template #description>
-        〔一键配置〕功能现已升级为“付费Pro版”专属功能，
-        <br />
-        <br />
-        请联系面板管理员〔购买授权码〕之后才能继续使用。
-    </template>
-    
-    <template #icon><a-icon type="crown"></a-icon></template>
-     </a-alert>
-        <div :style="{ marginTop: '20px', textAlign: 'center' }">
-          <p>
-             <a href="https://t.me/Buy_ShouQuan_Bot" target="_blank">“授权码购买”机器人：@Buy_ShouQuan_Bot</a>
-          </p>
-       </div>
-     </a-modal>
     </a-layout-content>
   </a-layout>
 </a-layout>
@@ -894,8 +863,6 @@
             ipLimitEnable: false,
             pageSize: 50,
 			
-            // 【中文注释】: 新增数据属性，用于控制“一键配置”模态框的显示状态
-            oneClickModalVisible: false,
         },
 		
         mounted() {
@@ -1123,7 +1090,7 @@ async openPort(port) {
     } catch (err) {
         success = false;
         console.error(`请求放行端口 ${port} 失败:`, err);
-        // 〔中文注释〕: 网络错误或返回了非JSON内容（例如502网关错误）会在这里捕获。
+            // 〔中文注释〕: 网络错误或返回了非JSON内容（例如502网关错误）会在这里捕获。
         this.$message.error(`请求放行端口 ${port} 失败，请检查网络或后端服务状态。 ${err.message}`);
     } finally {
         loadingMessage(); // 无论成功或失败，都关闭加载提示
@@ -1131,18 +1098,6 @@ async openPort(port) {
     return success;
 },
 
-
-            // 【中文注释】: 以下是新增和修改后的方法，用于处理“一键配置”和“订阅转换”
-            // 【中文注释】: 打开“一键配置”模态框
-            openOneClickConfig() {
-                this.oneClickModalVisible = true;
-            },
-
-            // 【中文注释】: 处理“一键配置”模态框的取消操作
-            handleOneClickCancel() {
-                this.oneClickModalVisible = false;
-                this.inboundLink = '';          // 关闭时清空链接，以便下次重新打开时显示选项
-            },
 
             // 〔中文注释〕: 处理“订阅转换”按钮的点击事件 (已更新为完整逻辑)
             handleSubscriptionConversion() {

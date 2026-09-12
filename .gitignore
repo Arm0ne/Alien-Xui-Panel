@@ -33,8 +33,5 @@ Thumbs.db
 *.exe
 x-ui.db
 
-# Ignore Docker specific files
-docker-compose.override.yml
-
 # Ignore .env (Environment Variables) file
 .env
