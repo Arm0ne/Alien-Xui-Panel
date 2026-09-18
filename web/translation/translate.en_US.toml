@@ -82,7 +82,6 @@
 "xray" = "Xray Configs"
 "logout" = "Log Out"
 "link" = "Manage/Configure Database"
-"navigation" = "Practical Navigation"
 
 [pages.login]
 "hello" = "Hello"
@@ -478,9 +477,6 @@
 "statsOutboundUplinkDesc" = "Enables the statistics collection for upstream traffic of all outbound proxies."
 "statsOutboundDownlink" = "Outbound Download Statistics"
 "statsOutboundDownlinkDesc" = "Enables the statistics collection for downstream traffic of all outbound proxies."
-
-[pages.navigation]
-"title" = "Practical Navigation"
 
 [pages.xray.rules]
 "first" = "First"

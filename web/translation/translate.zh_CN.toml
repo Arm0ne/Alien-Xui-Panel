@@ -83,7 +83,6 @@
 "xray" = "Xray设置"
 "logout" = "退出登录"
 "link" = "管理/配置数据库"
-"navigation" = "实用导航"
 
 [pages.login]
 "hello" = "你好"
@@ -493,9 +492,6 @@
 "statsOutboundUplinkDesc" = "启用所有出站代理的上行流量统计收集。"
 "statsOutboundDownlink" = "出站下载统计"
 "statsOutboundDownlinkDesc" = "启用所有出站代理的下行流量统计收集。"
-
-[pages.navigation]
-"title" = "实用导航"
 
 [pages.xray.rules]
 "first" = "置顶"
