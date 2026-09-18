@@ -163,25 +163,25 @@ install_free_version() {
     install_base() {
         case "${release}" in
         ubuntu | debian | armbian)
-            apt-get update && apt-get install -y -q wget curl sudo tar tzdata
+            apt-get update && apt-get install -y -q wget curl sudo tar tzdata iproute2
             ;;
         centos | rhel | almalinux | rocky | ol)
-            yum -y --exclude=kernel* update && yum install -y -q wget curl sudo tar tzdata
+            yum -y --exclude=kernel* update && yum install -y -q wget curl sudo tar tzdata iproute
             ;;
         fedora | amzn | virtuozzo)
-            dnf -y --exclude=kernel* update && dnf install -y -q wget curl sudo tar tzdata
+            dnf -y --exclude=kernel* update && dnf install -y -q wget curl sudo tar tzdata iproute
             ;;
         arch | manjaro | parch)
-            pacman -Sy && pacman -S --noconfirm wget curl sudo tar tzdata
+            pacman -Sy && pacman -S --noconfirm wget curl sudo tar tzdata iproute2
             ;;
         alpine)
-            apk update && apk add --no-cache wget curl sudo tar tzdata
+            apk update && apk add --no-cache wget curl sudo tar tzdata iproute2 iproute2-tc
             ;;
         opensuse-tumbleweed)
-            zypper refresh && zypper -q install -y wget curl sudo tar timezone
+            zypper refresh && zypper -q install -y wget curl sudo tar timezone iproute2
             ;;
         *)
-            apt-get update && apt-get install -y -q wget curl sudo tar tzdata
+            apt-get update && apt-get install -y -q wget curl sudo tar tzdata iproute2
             ;;
         esac
     }

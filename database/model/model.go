@@ -41,6 +41,12 @@ type Inbound struct {
 	// gorm:"column:device_limit;default:0" 定义了数据库中的字段名和默认值。
 	DeviceLimit   int                  `json:"deviceLimit" form:"deviceLimit" gorm:"column:device_limit;default:0"`
 
+	// 中文注释: 新增「入站限速」字段，单位 Mbps，0 表示不限速。
+	// 语义: 该入站端口下的所有用户共享这一个带宽额度（端口级限速）。
+	// 实现: Xray-core 本身没有限速能力，真正的限速由面板在内核层用 tc(HTB) 下发，
+	// 这里只保存配置值，具体见 limit 包与 web/job/speed_limit_job.go。
+	SpeedLimit    int                  `json:"speedLimit" form:"speedLimit" gorm:"column:speed_limit;default:0"`
+
 	ClientStats []xray.ClientTraffic `gorm:"foreignKey:InboundId;references:Id" json:"clientStats" form:"clientStats"`
 
 	// config part
@@ -98,10 +104,7 @@ type Client struct {
 	ID         string `json:"id"`
 	Security   string `json:"security"`
 	Password   string `json:"password"`
-	
-	// 中文注释: 新增“限速”字段，单位 KB/s，0 表示不限速。
-    SpeedLimit   int           `json:"speedLimit" form:"speedLimit"`
-	
+
 	Flow       string `json:"flow"`
 	Email      string `json:"email"`
 	LimitIP    int    `json:"limitIp"`

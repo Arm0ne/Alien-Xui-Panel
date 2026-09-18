@@ -5,7 +5,6 @@ import (
 	"errors"
 	"runtime"
 	"sync"
-    "strconv"
 
 	"x-ui/logger"
 	"x-ui/xray"
@@ -118,27 +117,13 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 	}
 
 	// =================================================================
-	// 中文注释: 动态限速核心逻辑 - 第一步: 收集所有限速值 
+	// 中文注释: 统一处理 Xray 的 policy（策略）配置
 	// =================================================================
-    // 创建一个 map 用于存储所有出现过的、不为0的限速值
-	uniqueSpeeds := make(map[int]bool)
-	for _, inbound := range inbounds {
-		if !inbound.Enable {
-			continue
-		}
-		
-        // 获取该入站下的所有客户端设置
-		dbClients, _ := s.inboundService.GetClients(inbound)
-		for _, dbClient := range dbClients {
-			if dbClient.SpeedLimit > 0 {
-				uniqueSpeeds[dbClient.SpeedLimit] = true
-			}
-		}
-	}
-
-	// =================================================================
-	// 中文注释: 动态限速核心逻辑 - 第二步: 根据收集到的限速值，动态生成 Policy Levels
-	// =================================================================
+	// 重要说明: Xray-core 的 policy.levels 里只有「连接超时」和「统计开关」，
+	// 其中 uplinkOnly / downlinkOnly 的单位是「秒」，跟带宽没有任何关系。
+	// 所以「入站限速」不可能靠这里实现，它由面板在内核层用 tc(HTB) 下发，
+	// 详见 limit 包与 web/job/speed_limit_job.go。
+	// 这里只负责保证统计开关是打开的，否则流量统计和设备限制都会失效。
 
 	// 1. 先从模板中解析出已有的 policy 对象
 	var finalPolicy map[string]interface{}
@@ -159,48 +144,26 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 		policyLevels = make(map[string]interface{})
 	}
 	
-	// 3. 〔重要修改〕: 确保 level 0 策略的完整性，这是让设备限制和默认用户统计生效的关键
+	// 确保 level 0（未单独指定 level 的用户都归到这一级）的统计开关是开启的
 	var level0 map[string]interface{}
 	if l0, ok := policyLevels["0"].(map[string]interface{}); ok {
-		// 〔中文注释〕: 如果模板中已存在 level 0，使用它作为基础进行修改。
 		level0 = l0
 	} else {
-		// 〔中文注释〕: 如果模板中不存在，则创建一个全新的 map。
 		level0 = make(map[string]interface{})
 	}
-	// 〔中文注释〕: 无论 level 0 是否存在，都为其补充或覆盖以下关键参数。
-	// handshake 和 connIdle 是激活 Xray 连接统计的前提，
-	// uplinkOnly 和 downlinkOnly 设置为 0 代表不限速，这是 level 0 用户的默认行为。
-	// statsUserUplink 和 statsUserDownlink 确保用户的流量能够被统计。
-	level0["handshake"] = 4
-	level0["connIdle"] = 300
-	level0["uplinkOnly"] = 0
-	level0["downlinkOnly"] = 0
+	// 仅在模板里没有配置时补默认值，不覆盖用户自己的超时设置
+	if _, ok := level0["handshake"]; !ok {
+		level0["handshake"] = 4
+	}
+	if _, ok := level0["connIdle"]; !ok {
+		level0["connIdle"] = 300
+	}
+	// 这三个开关必须打开：前两个用于用户流量统计，最后一个用于在线 IP 统计（设备限制依赖它）
 	level0["statsUserUplink"] = true
-	level0["statsUserDownlink"] = true 
-	// 〔新增〕: 增加此关键选项以启用 Xray-core 的在线 IP 统计功能。
-	// 这是让【设备限制】功能正常工作的前提。
+	level0["statsUserDownlink"] = true
 	level0["statsUserOnline"] = true
-	
-	// 〔中文注释〕: 将完整配置好的 level 0 写回 policyLevels，确保最终生成的 config.json 是正确的。
 	policyLevels["0"] = level0
 
-	// 4. 遍历所有收集到的限速值，为每个独立的限速值创建对应的 level
-	for speed := range uniqueSpeeds {
-		// 为每个速率创建一个 level，level 的名字就是速率的字符串形式
-		// 例如，速率 1024 KB/s 对应 level "1024"
-		policyLevels[strconv.Itoa(speed)] = map[string]interface{}{
-			"downlinkOnly": speed,
-			"uplinkOnly":   speed,
-			"handshake":         4,
-			"connIdle":          300,
-			"statsUserUplink":   true,
-			"statsUserDownlink": true,
-			"statsUserOnline": true,
-		}
-	}
-
-	// 5. 将修改后的 levels 写回 policy 对象，并序列化回 xrayConfig.Policy，将生成的 policy 应用到 Xray 配置中
 	finalPolicy["levels"] = policyLevels
 	policyJSON, err := json.Marshal(finalPolicy)
 	if err != nil {
@@ -209,18 +172,10 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 	xrayConfig.Policy = json_util.RawMessage(policyJSON)
 
 	// =================================================================
-    // 中文注释: 在这里增加日志，打印最终生成的限速策略
-    // =================================================================
-	if len(uniqueSpeeds) > 0 {
-		finalPolicyLog, _ := json.Marshal(policyLevels)
-		logger.Infof("已为Xray动态生成〔限速策略〕: %s", string(finalPolicyLog))
-	}
-
+	// 逐个 inbound 构建 inboundConfig
 	// =================================================================
-	// 中文注释: 动态限速核心逻辑 - 第三步: 为设置了限速的用户分配对应的 Level，逐个 inbound 构建 inboundConfig
-	// =================================================================
-    // 触发一次空调用以处理可能的残留任务	
-    s.inboundService.AddTraffic(nil, nil) 
+	// 触发一次空调用以处理可能的残留任务
+	s.inboundService.AddTraffic(nil, nil) 
 	
 	for _, inbound := range inbounds {
 		if !inbound.Enable {
@@ -229,20 +184,6 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 
 		// 先生成一个 inboundConfig（后面会覆盖 Settings/StreamSettings）
 		inboundConfig := inbound.GenXrayInboundConfig()
-
-		// 从 DB clients 建立 email/id -> speedLimit 映射（优先使用 DB 的值）
-		speedByEmail := make(map[string]int)
-		speedById := make(map[string]int)
-		dbClients, _ := s.inboundService.GetClients(inbound)
-		for _, dbc := range dbClients {
-			if dbc.Email != "" {
-				speedByEmail[dbc.Email] = dbc.SpeedLimit
-			}
-			// 如果有 id 字段也建立映射（以防 email 不存在）
-			if dbc.ID != "" {
-				speedById[dbc.ID] = dbc.SpeedLimit
-			}
-		}
 
 		// 解析 inbound.Settings
 		var settings map[string]interface{}
@@ -276,7 +217,6 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 				// 中文注释: 用户过滤 - 2) inbound.ClientStats 检查 (DB/流量层禁用)
 				// -----------------------------------------------------------------
 				email, _ := c["email"].(string)
-				idStr, _ := c["id"].(string)
 				disabledByStat := false
 				for _, stat := range clientStats {
 					if stat.Email == email && !stat.Enable {
@@ -308,52 +248,6 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 				if method, ok := c["method"]; ok { xrayClient["method"] = method }
 
 				// ⚠️ security 字段已移除，不再加入到 xrayClient
-
-				// -----------------------------------------------------------------
-				// 中文注释: 限速等级映射（优先 DB，再回退 settings.speedLimit）
-				// -----------------------------------------------------------------
-
-				// =================================================================
-				// 这里的逻辑是准备将 client 对象提交给 Xray-core。
-				// 我们需要将 speedLimit 转换为 Xray 认识的 level 字段。
-				// 这样可以确保包含 speedLimit 的完整用户信息被用于生成配置。
-				// =================================================================
-				level := 0
-				if email != "" {
-					if v, ok := speedByEmail[email]; ok && v > 0 {
-						level = v
-					}
-				}
-				if level == 0 && idStr != "" {
-					if v, ok := speedById[idStr]; ok && v > 0 {
-						level = v
-					}
-				}
-				if level == 0 {
-					if sl, ok := c["speedLimit"]; ok {
-						switch vv := sl.(type) {
-						case float64:
-							level = int(vv)
-						case int:
-							level = vv
-						case int64:
-							level = int(vv)
-						case string:
-							if n, err := strconv.Atoi(vv); err == nil {
-								level = n
-							}
-						}
-					}
-				}
-
-				// 【新增功能】在这里添加日志记录
-				// 只有当最终计算出的 level 大于 0，且 email 存在时，才记录日志
-				if level > 0 && email != "" {
-					logger.Infof("为用户 %s 应用〔独立限速〕: %d KB/s", email, level)
-				}
-				// =================================================================
-
-				xrayClient["level"] = level
 
 				xrayClients = append(xrayClients, xrayClient)
 			}

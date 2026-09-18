@@ -244,8 +244,8 @@
 "unlimited"="No restrictions"
 "deviceLimit"="Device restrictions"
 "deviceLimitDesc"="Please enter the specific quantity, \r\n0 means no limit (leaving it blank also means no limit)"
-"speedLimit"="Independent speedLimit"
-"speedLimitDesc"="Set the maximum upload/download speed for this user in KB/s. 0 means unlimited speed."
+"speedLimit"="Inbound speed limit"
+"speedLimitDesc"="Maximum download speed of this inbound in Mbps. \r\nShared by every user of this inbound. 0 means unlimited. \r\nImplemented by the system's tc (HTB), Linux only."
 "is_subConversion"="Subscription Conversion"
 "confirmCreate"="Confirm submission creation"
 

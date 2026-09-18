@@ -248,8 +248,8 @@
 "unlimited"="无限制"
 "deviceLimit"="设备限制"
 "deviceLimitDesc"="请输入具体数量，\r\n0表示不限制（留空也表示不限制）"
-"speedLimit"="独立限速"
-"speedLimitDesc"="设置该用户的最大〔上传/下载速度〕，\r\n单位 KB/s，0 表示不限速"
+"speedLimit"="入站限速"
+"speedLimitDesc"="设置该入站的最大〔下载速度〕，单位 Mbps，0 表示不限速。\r\n该入站下的所有用户共享这个额度（由系统 tc 限速实现）"
 "is_subConversion"="订阅转换"
 "confirmCreate"="确认提交创建"
 

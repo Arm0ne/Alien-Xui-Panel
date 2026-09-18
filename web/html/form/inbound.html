@@ -85,6 +85,25 @@
             placeholder="0 = 不限制" />
     </a-form-item>
 
+    <!-- 入站限速 单独占一行（端口级，单位 Mbps） -->
+    <a-form-item>
+        <template slot="label">
+            <a-tooltip>
+                <template slot="title">
+                {{ i18n "pages.inbounds.speedLimitDesc" }}
+                </template>
+                {{ i18n "pages.inbounds.speedLimit" }}
+                <a-icon type="question-circle"></a-icon>
+            </a-tooltip>
+        </template>
+        <a-input-number
+            v-model.number="dbInbound.speedLimit"
+            :min="0"
+            style="width: 100%">
+            <template slot="addonAfter">Mbps</template>
+        </a-input-number>
+    </a-form-item>
+
     <!-- 到期时间 -->
     <a-form-item>
         <template slot="label">

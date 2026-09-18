@@ -14,6 +14,9 @@ class DBInbound {
       // 新增：入站级设备限制（0 表示不限制）
         this.deviceLimit = 0;
 
+        // 新增：入站级限速，单位 Mbps（0 表示不限制，端口下所有用户共享此额度）
+        this.speedLimit = 0;
+
         this.listen = "";
         this.port = 0;
         this.protocol = "";

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"x-ui/config"
+	"x-ui/limit"
 	"x-ui/logger"
 	"x-ui/util/common"
 	"x-ui/web/controller"
@@ -316,6 +317,9 @@ func (s *Server) startTask() {
 	// check client ips from log file every 10 sec
 	s.cron.AddJob("@every 10s", job.NewCheckClientIpJob())
 
+	// 每 10 秒对账一次「入站限速」，配置有变化才会真正下发 tc 命令
+	s.cron.AddJob("@every 10s", job.NewSpeedLimitJob())
+
 	// check client ips from log file every day
 	s.cron.AddJob("@daily", job.NewClearLogsJob())
 
@@ -478,6 +482,10 @@ func (s *Server) Start() (err error) {
 func (s *Server) Stop() error {
 	s.cancel()
 	s.xrayService.StopXray()
+	// 面板停下来时把面板自己下发的限速规则也清掉，避免留下“看不见的” tc 规则
+	if err := limit.Clear(); err != nil {
+		logger.Warning("[限速] 清理 tc 规则失败:", err)
+	}
 	if s.cron != nil {
 		s.cron.Stop()
 	}

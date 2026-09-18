@@ -248,8 +248,8 @@
 "unlimited" = "無限制"
 "deviceLimit" = "裝置限制"
 "deviceLimitDesc"="請輸入具體數量，\r\n0表示不限制（留空也表示不限制）"
-"speedLimit"="獨立限速"
-"speedLimitDesc"="設定該使用者的最大〔上傳/下載速度〕，\r\n單位 KB/s，0 表示不限速"
+"speedLimit"="入站限速"
+"speedLimitDesc"="設定該入站的最大〔下載速度〕，單位 Mbps，0 表示不限速。\r\n該入站下的所有使用者共享這個額度（由系統 tc 限速實現）"
 "is_subConversion"="訂閱轉換"
 "confirmCreate"="確認提交創建"
 
