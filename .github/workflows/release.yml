@@ -1,0 +1,278 @@
+name: Build & Release
+
+# 推一个 v 开头的标签即自动发布；也可以在 Actions 页面手动触发。
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '发布标签，例如 v1.0.2（不存在则自动在当前提交上创建）'
+        required: true
+      refresh_geo:
+        description: '重新下载最新 geo 数据（默认复用上次发布的数据）'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # ── 固定 Xray 内核版本 ──────────────────────────────────────────────
+  # 本面板对内核版本是「锁死」的：不是最新的就是最稳定的。
+  # 要升级内核时，改这两个值即可，SHA256 用官方 .dgst 文件核对。
+  #   下载页: https://github.com/XTLS/Xray-core/releases/tag/v<版本>
+  #   校验值: https://github.com/XTLS/Xray-core/releases/download/v<版本>/Xray-linux-64.zip.dgst
+  XRAY_VERSION: '26.6.1'
+  XRAY_ZIP_SHA256: '136e822e99e616692550723e8b607cd8858c62a390aea5704938bc27930904ba'
+
+  # ── 交叉编译工具链 ─────────────────────────────────────────────────
+  # 用 Zig 作为 C 交叉编译器，把 glibc 基线压到 2.28，
+  # 这样产物能装进 Debian 10+/Ubuntu 18.10+/CentOS 8+ 等较老的 VPS。
+  # 直接跑在 ubuntu-latest（glibc 2.39）上编译会要求 glibc>=2.39，老机器装不上。
+  ZIG_VERSION: '0.14.1'
+  ZIG_TARGET: 'x86_64-linux-gnu'
+  MAX_GLIBC_MINOR: '28'
+
+  ASSET_NAME: 'x-ui-linux-amd64.tar.gz'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 解析标签与版本号
+        id: ver
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          # 必须是 v1.2.3 形式：install.sh 打印的是 "v${xui_version}"，
+          # 而 x-ui.sh 的「自定义版本」会给输入自动补小写 v，所以标签必须是小写 v。
+          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::标签必须形如 v1.0.2（小写 v + 三段纯数字），当前为：$TAG"
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "本次发布版本：$TAG"
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 确保标签存在（仅手动触发时）
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.ver.outputs.tag }}"
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "标签 $TAG 已存在，直接使用"
+          else
+            git config user.name  "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag "$TAG"
+            git push origin "$TAG"
+            echo "已在当前提交上创建标签 $TAG"
+          fi
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: 安装 Zig（交叉编译用的 C 工具链）
+        run: |
+          set -euo pipefail
+          # 装到用户目录：GitHub runner 上的 /opt 属于 root，普通用户无法写入。
+          ZIG_DIR="$HOME/zig"
+          if [ ! -x "$ZIG_DIR/zig" ]; then
+            curl -fsSL -o /tmp/zig.tar.xz \
+              "https://ziglang.org/download/${ZIG_VERSION}/zig-x86_64-linux-${ZIG_VERSION}.tar.xz"
+            mkdir -p "$HOME/zig-extract"
+            tar -xJf /tmp/zig.tar.xz -C "$HOME/zig-extract"
+            mv "$HOME/zig-extract/zig-x86_64-linux-${ZIG_VERSION}" "$ZIG_DIR"
+            rmdir "$HOME/zig-extract"
+          fi
+          echo "$ZIG_DIR" >> "$GITHUB_PATH"
+          echo "Zig 版本：$("$ZIG_DIR/zig" version)"
+
+      - name: 写入版本号
+        run: |
+          set -euo pipefail
+          # 标签即版本号，编译前注入 config/version（go:embed 是编译期嵌入的）。
+          printf '%s\n' "${{ steps.ver.outputs.version }}" > config/version
+          echo "config/version => $(cat config/version)"
+
+      - name: 编译面板（linux/amd64 + CGO）
+        env:
+          CGO_ENABLED: '1'
+          GOOS: linux
+          GOARCH: amd64
+          CC: 'zig cc -target ${{ env.ZIG_TARGET }}'
+          CGO_CFLAGS: '-O2'
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          go build -trimpath -ldflags '-s -w' -o dist/x-ui ./
+          ls -l dist/x-ui
+
+      - name: 二进制体检
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          set -euo pipefail
+          B=dist/x-ui
+
+          file "$B" | grep -q 'ELF 64-bit LSB.*x86-64' \
+            || { echo "::error::产物不是 x86-64 ELF 可执行文件"; exit 1; }
+
+          # 关键防线：CGO_ENABLED=0 会编出 sqlite 桩实现，能构建但一开库就崩。
+          if grep -aq 'go-sqlite3 requires cgo to work' "$B"; then
+            echo "::error::这是 CGO_ENABLED=0 的桩二进制，sqlite 不可用，绝不能发布"
+            exit 1
+          fi
+
+          grep -aq "$VERSION" "$B" \
+            || { echo "::error::版本号 $VERSION 未嵌入二进制"; exit 1; }
+
+          MAX=$(grep -aoE 'GLIBC_2\.[0-9]+' "$B" | sed 's/GLIBC_2\.//' | sort -n | tail -1)
+          echo "glibc 基线要求：2.${MAX:-0}"
+          [ "${MAX:-0}" -le "$MAX_GLIBC_MINOR" ] \
+            || { echo "::error::glibc 基线 2.$MAX 过新，会装不进老系统（上限 2.$MAX_GLIBC_MINOR）"; exit 1; }
+
+          echo "面板二进制 SHA256：$(sha256sum "$B" | cut -d' ' -f1)"
+
+      - name: 准备 bin/ 目录（geo 数据 + 固定版 Xray 内核）
+        env:
+          REFRESH_GEO: ${{ inputs.refresh_geo }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/x-ui/bin work
+
+          if [ "${REFRESH_GEO:-false}" = "true" ]; then
+            echo "==> 从官方源刷新 geo 数据（URL 与面板内的「更新 Geo 文件」一致）"
+            curl -fsSL -o build/x-ui/bin/geoip.dat     https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat
+            curl -fsSL -o build/x-ui/bin/geosite.dat    https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat
+            curl -fsSL -o build/x-ui/bin/geoip_IR.dat   https://github.com/chocolate4u/Iran-v2ray-rules/releases/latest/download/geoip.dat
+            curl -fsSL -o build/x-ui/bin/geosite_IR.dat https://github.com/chocolate4u/Iran-v2ray-rules/releases/latest/download/geosite.dat
+            curl -fsSL -o build/x-ui/bin/geoip_RU.dat   https://github.com/runetfreedom/russia-v2ray-rules-dat/releases/latest/download/geoip.dat
+            curl -fsSL -o build/x-ui/bin/geosite_RU.dat https://github.com/runetfreedom/russia-v2ray-rules-dat/releases/latest/download/geosite.dat
+          else
+            echo "==> 复用上一次发布中的 geo 数据（保持稳定，不随上游变动）"
+            PREV_URL="https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/${ASSET_NAME}"
+            curl -fsSL -o work/prev.tar.gz "$PREV_URL" \
+              || { echo "::error::无法获取上一次发布包：$PREV_URL（至少需要一个历史 Release 作为基线）"; exit 1; }
+            tar -xzf work/prev.tar.gz -C work
+            cp work/x-ui/bin/*.dat build/x-ui/bin/
+            echo "已沿用 geo 数据："
+            ls -l build/x-ui/bin/
+          fi
+
+          echo "==> 下载固定版 Xray 内核 v${XRAY_VERSION}"
+          curl -fsSL -o work/xray.zip \
+            "https://github.com/XTLS/Xray-core/releases/download/v${XRAY_VERSION}/Xray-linux-64.zip"
+          echo "${XRAY_ZIP_SHA256}  work/xray.zip" | sha256sum -c - \
+            || { echo "::error::Xray 内核校验和不符，拒绝继续"; exit 1; }
+
+          unzip -oq work/xray.zip -d work/xray
+          install -m 0755 work/xray/xray       build/x-ui/bin/xray-linux-amd64
+          install -m 0644 work/xray/LICENSE    build/x-ui/bin/LICENSE
+          install -m 0644 work/xray/README.md  build/x-ui/bin/README.md
+
+          # 实跑一次确认内核自报版本，防止「版本对但内容是别的」
+          ./build/x-ui/bin/xray-linux-amd64 -version | head -1
+          ./build/x-ui/bin/xray-linux-amd64 -version | grep -q "Xray ${XRAY_VERSION} " \
+            || { echo "::error::Xray 内核自报版本不是 ${XRAY_VERSION}"; exit 1; }
+
+      - name: 组装发布包
+        run: |
+          set -euo pipefail
+          install -m 0755 dist/x-ui     build/x-ui/x-ui
+          install -m 0755 x-ui.sh       build/x-ui/x-ui.sh
+          install -m 0644 x-ui.service  build/x-ui/x-ui.service
+          chmod 0644 build/x-ui/bin/*.dat
+
+          # --owner/--group 固定为 0，否则解压到目标机会带上 runner 的 UID(1001)
+          tar --owner=0 --group=0 --numeric-owner \
+              -czf "dist/${ASSET_NAME}" -C build x-ui
+          ls -l dist/
+
+      - name: 发布包体检
+        run: |
+          set -euo pipefail
+          mkdir -p verify
+          tar -xzf "dist/${ASSET_NAME}" -C verify
+
+          # install.sh 会先 rm -rf /usr/local/x-ui/ 再解压，
+          # 所以这些文件缺任何一个都会毁掉目标机的 Xray 运行环境。
+          for f in x-ui x-ui.sh x-ui.service bin/xray-linux-amd64 bin/geoip.dat bin/geosite.dat; do
+            [ -f "verify/x-ui/$f" ] || { echo "::error::发布包缺少 $f"; exit 1; }
+          done
+
+          A=$(sha256sum dist/x-ui        | cut -d' ' -f1)
+          B=$(sha256sum verify/x-ui/x-ui | cut -d' ' -f1)
+          [ "$A" = "$B" ] || { echo "::error::包内二进制与编译产物不一致"; exit 1; }
+
+          echo "包内容与权限："
+          tar -tvzf "dist/${ASSET_NAME}"
+          sha256sum "dist/${ASSET_NAME}" | tee "dist/${ASSET_NAME}.sha256"
+
+      - name: 创建 Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.ver.outputs.tag }}"
+          PANEL_SHA=$(sha256sum dist/x-ui | cut -d' ' -f1)
+          PKG_SHA=$(cut -d' ' -f1 < "dist/${ASSET_NAME}.sha256")
+
+          cat > notes.md <<EOF
+          使用固定版 Xray 内核 **v${XRAY_VERSION}**，geo 数据沿用上一次发布。
+
+          ### 安装 / 升级
+
+          \`\`\`bash
+          bash <(curl -Ls https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/install.sh)
+          \`\`\`
+
+          已装面板的机器可直接执行 \`x-ui\` 后选第 2 项升级，数据不会丢失。
+
+          ### 校验值
+
+          | 文件 | SHA256 |
+          |---|---|
+          | 面板二进制 \`x-ui\` | \`${PANEL_SHA}\` |
+          | 发布包 \`${ASSET_NAME}\` | \`${PKG_SHA}\` |
+          | Xray 内核 | \`v${XRAY_VERSION}\`（官方原版，未修改） |
+          EOF
+
+          gh release create "$TAG" \
+            "dist/${ASSET_NAME}" \
+            "dist/${ASSET_NAME}.sha256" \
+            --title "Alien-Panel ${TAG}" \
+            --notes-file notes.md \
+            --latest
+
+          echo "已发布 $TAG"
+
+      - name: 汇总
+        run: |
+          {
+            echo "## Alien-Panel ${{ steps.ver.outputs.tag }} 发布完成"
+            echo ""
+            echo "| 项目 | 值 |"
+            echo "|---|---|"
+            echo "| 版本 | \`${{ steps.ver.outputs.version }}\` |"
+            echo "| Xray 内核 | \`v${XRAY_VERSION}\`（固定） |"
+            echo "| glibc 基线 | \`2.28\`（兼容 Debian 10+/Ubuntu 18.10+） |"
+            echo "| 资产 | \`${ASSET_NAME}\` |"
+            echo "| 包 SHA256 | \`$(cut -d' ' -f1 < "dist/${ASSET_NAME}.sha256")\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
