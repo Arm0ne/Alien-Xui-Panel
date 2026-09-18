@@ -22,12 +22,6 @@ git tag v1.0.3 && git push origin main --tags
 
 完整的发版流程、Xray 内核升级方法、故障排查等，见 **[docs/RELEASE.md](docs/RELEASE.md)**。
 
-## 本地构建
-
-```text
-go test ./...
-go build ./...
-```
 
 Linux 安装和面板管理使用项目根目录的 `install.sh` 与 `x-ui.sh`。运行时数据默认保存在 `/etc/x-ui`，程序目录默认是 `/usr/local/x-ui`。
 
