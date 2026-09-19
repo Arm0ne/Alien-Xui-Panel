@@ -26,12 +26,12 @@ class AllSetting {
         this.twoFactorEnable = false;
         this.twoFactorToken = "";
         this.xrayTemplateConfig = "";
-        this.subEnable = false;
+        this.subEnable = true;
         this.subTitle = "";
         this.subListen = "";
-        this.subPort = 13788;
-        this.subPath = "/sub/";
-        this.subJsonPath = "/json/";
+        this.subPort = 58888;
+        this.subPath = "/yfzgsub/";
+        this.subJsonPath = "/yfzgjson/";
         this.subDomain = "";
         this.externalTrafficInformEnable = false;
         this.externalTrafficInformURI = "";

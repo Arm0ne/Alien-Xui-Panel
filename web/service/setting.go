@@ -50,11 +50,11 @@ var defaultValueMap = map[string]string{
 	"tgLang":                      "zh-CN",
 	"twoFactorEnable":             "false",
 	"twoFactorToken":              "",
-	"subEnable":                   "false",
+	"subEnable":                   "true",
 	"subTitle":                    "",
 	"subListen":                   "",
-	"subPort":                     "13788",
-	"subPath":                     "/sub/",
+	"subPort":                     "58888",
+	"subPath":                     "/yfzgsub/",
 	"subDomain":                   "",
 	"subCertFile":                 "",
 	"subKeyFile":                  "",
@@ -62,7 +62,7 @@ var defaultValueMap = map[string]string{
 	"subEncrypt":                  "true",
 	"subShowInfo":                 "true",
 	"subURI":                      "",
-	"subJsonPath":                 "/json/",
+	"subJsonPath":                 "/yfzgjson/",
 	"subJsonURI":                  "",
 	"subJsonFragment":             "",
 	"subJsonNoises":               "",
@@ -168,6 +168,48 @@ func (s *SettingService) ResetSettings() error {
 	}
 	return db.Model(model.User{}).
 		Where("1 = 1").Error
+}
+
+// 订阅相关设置的「旧默认值 → 新默认值」对照表。
+// 说明: 修改 defaultValueMap 只对全新安装生效，已经装好的面板里存的是旧值，
+// 所以这里做一次性升级：只有「仍然是旧默认值」的项才会被改写，
+// 用户自己设置过的值一律不动。
+var subSettingDefaults = []struct {
+	key      string
+	oldValue string
+	newValue string
+}{
+	{"subEnable", "false", "true"},
+	{"subPort", "13788", "58888"},
+	{"subPath", "/sub/", "/yfzgsub/"},
+	{"subJsonPath", "/json/", "/yfzgjson/"},
+}
+
+const subSettingMigratedKey = "subSettingDefaultsMigrated"
+
+// ApplySubSettingDefaults 把订阅相关设置从旧默认值升级为新默认值（只执行一次）。
+func (s *SettingService) ApplySubSettingDefaults() error {
+	if setting, err := s.getSetting(subSettingMigratedKey); err == nil && setting.Value == "true" {
+		return nil
+	}
+
+	for _, d := range subSettingDefaults {
+		setting, err := s.getSetting(d.key)
+		if err != nil {
+			// 数据库里没有这一项（全新安装），直接走新的默认值即可
+			continue
+		}
+		if setting.Value != d.oldValue {
+			// 用户自己设置过，保持原样
+			continue
+		}
+		if err := s.saveSetting(d.key, d.newValue); err != nil {
+			return err
+		}
+		logger.Infof("[订阅设置] 默认值升级: %s = %s -> %s", d.key, d.oldValue, d.newValue)
+	}
+
+	return s.saveSetting(subSettingMigratedKey, "true")
 }
 
 func (s *SettingService) getSetting(key string) (*model.Setting, error) {
@@ -451,12 +493,30 @@ func (s *SettingService) GetSubDomain() (string, error) {
 	return s.getString("subDomain")
 }
 
+// GetSubCertFile 返回订阅服务使用的证书路径。
+// 订阅证书没有单独配置时，自动沿用面板证书，避免订阅服务没有 SSL。
 func (s *SettingService) GetSubCertFile() (string, error) {
-	return s.getString("subCertFile")
+	certFile, err := s.getString("subCertFile")
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(certFile) != "" {
+		return certFile, nil
+	}
+	return s.GetCertFile()
 }
 
+// GetSubKeyFile 返回订阅服务使用的私钥路径。
+// 订阅私钥没有单独配置时，自动沿用面板私钥。
 func (s *SettingService) GetSubKeyFile() (string, error) {
-	return s.getString("subKeyFile")
+	keyFile, err := s.getString("subKeyFile")
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(keyFile) != "" {
+		return keyFile, nil
+	}
+	return s.GetKeyFile()
 }
 
 func (s *SettingService) GetSubUpdates() (string, error) {

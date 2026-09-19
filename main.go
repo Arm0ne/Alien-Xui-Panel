@@ -58,6 +58,11 @@ func runWebServer() {
 	xrayService := service.XrayService{}
 	settingService := service.SettingService{}
 	serverService := service.ServerService{}
+
+	// 〔中文注释〕: 把订阅相关设置从旧默认值升级为新默认值（仅首次启动执行一次，之后靠标记跳过）
+	if err := settingService.ApplySubSettingDefaults(); err != nil {
+		logger.Warningf("升级订阅默认设置失败: %v", err)
+	}
 	// 还需要 InboundService 等，按需添加
 	inboundService := service.InboundService{}
 	lastStatus := service.Status{}
@@ -114,8 +119,9 @@ func runWebServer() {
 	global.SetSubServer(subServer)
 	err = subServer.Start()
 	if err != nil {
-		log.Fatalf("Error starting sub server: %v", err)
-		return
+		// 〔中文注释〕: 订阅服务启动失败（例如 58888 端口被占用）不应该拖垮整个面板，
+		// 这里只记录告警，面板照常启动，修好问题后重启面板即可。
+		logger.Warningf("订阅服务启动失败(端口被占用？): %v，面板将继续运行", err)
 	}
 
 	// 中文注释: 在面板服务启动后，我们在这里启动设备限制的后台任务
@@ -194,10 +200,10 @@ func runWebServer() {
 			global.SetSubServer(subServer)
 			err = subServer.Start()
 			if err != nil {
-				log.Fatalf("Error restarting sub server: %v", err)
-				return
+				logger.Warningf("订阅服务重启失败(端口被占用？): %v，面板将继续运行", err)
+			} else {
+				log.Println("Sub server restarted successfully.")
 			}
-			log.Println("Sub server restarted successfully.")
 
 		default:
 			server.Stop()
