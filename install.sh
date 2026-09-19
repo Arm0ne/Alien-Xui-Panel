@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==========================================================
-# Alien-Panel 免费版安装脚本
+# Alien-Panel 安装脚本
 # 项目: Alien-Panel
 # ==========================================================
 
@@ -21,11 +21,11 @@ ALIEN_PANEL_RELEASE_BASE="https://github.com/${ALIEN_PANEL_REPO}/releases"
 [[ $EUID -ne 0 ]] && echo -e "${red}致命错误: ${plain} 请使用 root 权限运行此脚本\n" && exit 1
 
 # ----------------------------------------------------------
-# 函数：免费版安装逻辑 (install_free_version)
+# 函数：安装逻辑 (install_panel)
 # ----------------------------------------------------------
-install_free_version() {
+install_panel() {
     echo ""
-    echo -e "${green}您选择了安装 【Alien-Panel 免费版】${plain}"
+    echo -e "${green}您选择了安装 【Alien-Panel】${plain}"
     echo ""
     echo -e "${green}即将开始执行标准安装流程...${plain}"
     sleep 2
@@ -279,7 +279,7 @@ install_free_version() {
             url="${ALIEN_PANEL_RELEASE_BASE}/download/${last_version}/x-ui-linux-$(arch).tar.gz"
             echo ""
             echo -e "--------------------------------------------"
-            echo -e "${green}---------------->>>>开始安装 Alien-Panel 免费版$1${plain}"
+            echo -e "${green}---------------->>>>开始安装 Alien-Panel$1${plain}"
             echo -e "--------------------------------------------"
             echo ""
             sleep 2
@@ -402,7 +402,7 @@ install_free_version() {
         wg-quick up wgcf >/dev/null 2>&1
 
         echo ""
-        echo -e "------->>>>${green}Alien-Panel 免费版 ${last_version}${plain}<<<<安装成功，正在启动..."
+        echo -e "------->>>>${green}Alien-Panel ${last_version}${plain}<<<<安装成功，正在启动..."
         sleep 1
         echo ""
         echo -e "         ---------------------"
@@ -458,7 +458,7 @@ install_free_version() {
     echo -e "${green}安装/更新完成。Alien-Panel 已准备就绪。${plain}"
 }
 
-# 免费版安装逻辑函数 (install_free_version) 结束
+# 安装逻辑函数 (install_panel) 结束
 
 # ----------------------------------------------------------
 # 脚本主菜单
@@ -467,7 +467,7 @@ main_menu() {
     echo -e "${green}======================================================${plain}"
     echo -e " 欢迎使用 ${yellow}〔Alien-Panel 面板〕${plain} 一键安装脚本"
     echo -e "${green}======================================================${plain}"
-    install_free_version
+    install_panel
 }
 
 # ----------------------------------------------------------
