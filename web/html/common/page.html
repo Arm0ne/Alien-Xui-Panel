@@ -34,6 +34,23 @@
 
 {{ define "page/body_start" }}
 <body>
+  <script>
+    // 【默认暗色主题 + 防首屏白闪】
+    // 规则: 浏览器里没有记录过用户的选择时默认暗色；用户手动切换过则以 localStorage 为准。
+    // 这里在页面内容渲染前就把主题类落到 body 上，避免暗色用户看到一下白屏。
+    (function () {
+      try {
+        var savedDarkMode = localStorage.getItem('dark-mode');
+        var isDarkTheme = savedDarkMode === null ? true : savedDarkMode === 'true';
+        document.body.className = isDarkTheme ? 'dark' : 'light';
+        if (isDarkTheme && localStorage.getItem('isUltraDarkThemeEnabled') === 'true') {
+          document.documentElement.setAttribute('data-theme', 'ultra-dark');
+        }
+      } catch (e) {
+        document.body.className = 'dark';
+      }
+    })();
+  </script>
   <div id="message"></div>
 {{ end }}
 

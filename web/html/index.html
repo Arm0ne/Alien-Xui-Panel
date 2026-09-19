@@ -784,22 +784,12 @@
 
 <script>
     (function() {
-        // 获取今天的日期 (1-31)
-        const dayOfMonth = new Date().getDate();
-
+        // 【固定的炫酷主题】: 不再按日期单双号切换，
+        // 永远是彩虹流光背景（cool-theme-styles），标准主题始终关闭。
         const coolTheme = document.getElementById('cool-theme-styles');
         const defaultTheme = document.getElementById('default-theme-styles');
-
-        // 判断日期是单号还是双号
-        if (dayOfMonth % 2 === 0) {
-            // 今天是双号 (偶数)，启用标准主题，禁用炫酷主题
-            if (coolTheme) coolTheme.disabled = true;
-            console.log('今天是' + dayOfMonth + '号 (双号)，启用【标准布局主题】。');
-        } else {
-            // 今天是单号 (奇数)，启用炫酷主题，禁用标准主题
-            if (defaultTheme) defaultTheme.disabled = true;
-            console.log('今天是' + dayOfMonth + '号 (单号)，启用【炫酷动画主题】。');
-        }
+        if (coolTheme) coolTheme.disabled = false;
+        if (defaultTheme) defaultTheme.disabled = true;
     })();
 </script>
 
